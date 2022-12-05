@@ -10,6 +10,7 @@ version: v1.0
 from typing import List
 
 import numpy as np
+import scipy
 from utils import utils
 from utils.utils import Puzzle
 
@@ -63,8 +64,16 @@ def reduce_dimensions(data: np.ndarray, model: dict) -> np.ndarray:
         np.ndarray: The reduced feature vectors.
     """
 
-    reduced_data = data[:, 0:N_DIMENSIONS]
-    return reduced_data
+    # reduced_data = data[:, 0:N_DIMENSIONS]
+    # return reduced_data
+    covx = np.cov(data, rowvar=0)
+    N = covx.shape[0]
+    w, v = scipy.linalg.eigh(covx, eigvals=(N-N_DIMENSIONS,N-1))
+    v = np.fliplr(v)
+    pca_processed_data = np.dot((data - np.mean(data)), v)
+    
+    return pca_processed_data
+
 
 
 def process_training_data(fvectors_train: np.ndarray, labels_train: np.ndarray) -> dict:
@@ -119,7 +128,16 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
     Returns:
         List[str]: A list of classifier labels, i.e. one label per input feature vector.
     """
-    return ["E"] * fvectors_test.shape[0]
+    fvectors_train = np.array(model['fvectors_train'])
+    labels_train = np.array(model['labels_train'])
+    x = np.dot(fvectors_test, fvectors_train.transpose())
+    modtest = np.sqrt(np.sum(fvectors_test * fvectors_test, axis=1))
+    modtrain = np.sqrt(np.sum(fvectors_train * fvectors_train, axis=1))
+    dist = x / np.outer(modtest, modtrain.transpose()) # cosine distance
+    nearest = np.argmax(dist, axis=1)
+    
+    return labels_train[nearest]
+    # return ["E"] * fvectors_test.shape[0]
 
 
 def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]:
