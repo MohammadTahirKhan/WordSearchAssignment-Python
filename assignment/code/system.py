@@ -63,17 +63,26 @@ def reduce_dimensions(data: np.ndarray, model: dict) -> np.ndarray:
     Returns:
         np.ndarray: The reduced feature vectors.
     """
-
-    # reduced_data = data[:, 0:N_DIMENSIONS]
-    # return reduced_data
-    covx = np.cov(data, rowvar=0)
-    N = covx.shape[0]
-    w, v = scipy.linalg.eigh(covx, eigvals=(N-N_DIMENSIONS,N-1))
-    v = np.fliplr(v)
-    pca_processed_data = np.dot((data - np.mean(data)), v)
     
-    return pca_processed_data
-
+    v = np.array(model['eigenvector'])
+    if len(v) == 0:
+        covx = np.cov(data, rowvar=0)
+        N = covx.shape[0]
+        w, v = scipy.linalg.eigh(covx, eigvals=(N-40,N-1))
+        v = np.fliplr(v)
+        
+    pca_data = np.dot((data - np.mean(data)), v)
+    processed_data = np.dot(pca_data, v.transpose()) + np.mean(data)
+    
+    v = np.array(model['eigenvector'])
+    if len(v) == 0:
+        covx = np.cov(processed_data, rowvar=0)
+        N = covx.shape[0]
+        w, v = scipy.linalg.eigh(covx, eigvals=(N - N_DIMENSIONS, N - 1))
+        v = np.fliplr(v)
+        model['eigenvector'] = v.tolist()
+    reconstructed_data = np.dot((processed_data - np.mean(processed_data)), v)
+    return reconstructed_data
 
 
 def process_training_data(fvectors_train: np.ndarray, labels_train: np.ndarray) -> dict:
@@ -105,8 +114,10 @@ def process_training_data(fvectors_train: np.ndarray, labels_train: np.ndarray) 
     # e.g. Storing training data labels and feature vectors in the model.
     model = {}
     model["labels_train"] = labels_train.tolist()
+    model['eigenvector'] = np.array([]).tolist()
     fvectors_train_reduced = reduce_dimensions(fvectors_train, model)
     model["fvectors_train"] = fvectors_train_reduced.tolist()
+    
     return model
 
 
@@ -133,11 +144,10 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
     x = np.dot(fvectors_test, fvectors_train.transpose())
     modtest = np.sqrt(np.sum(fvectors_test * fvectors_test, axis=1))
     modtrain = np.sqrt(np.sum(fvectors_train * fvectors_train, axis=1))
-    dist = x / np.outer(modtest, modtrain.transpose()) # cosine distance
+    dist = x / np.outer(modtest, modtrain.transpose())
     nearest = np.argmax(dist, axis=1)
     
     return labels_train[nearest]
-    # return ["E"] * fvectors_test.shape[0]
 
 
 def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]:
@@ -165,4 +175,66 @@ def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]
     Returns:
         list[tuple]: A list of four-element tuples indicating the word positions.
     """
-    return [(0, 0, 1, 1)] * len(words)
+    result = []
+    for word in words:
+        wordFound = False
+        word = word.upper()
+        for i in range(labels.shape[0]):
+            for j in range(labels.shape[1]):
+                if labels[i][j] == word[0]:
+                    for k in range(-1, 2):
+                            for l in range(-1, 2):
+                                if k == 0 and l == 0:
+                                    continue
+                                if i>=labels.shape[0]-(len(word) - 1) and k == 1:
+                                    continue
+                                if i<=len(word) - 1 and k == -1:
+                                    continue
+                                if j >= labels.shape[1]-(len(word) - 1) and l == 1:
+                                    continue
+                                if j<=len(word) - 1 and l == -1:
+                                    continue
+                                if check_word(labels, word, i, j, k, l):
+                                    result += [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
+                                    wordFound = True
+        if not wordFound:
+            temp = []
+            min = len(word)
+            for i in range(labels.shape[0]):
+                for j in range(labels.shape[1]):
+                    for k in range(-1, 2):
+                        for l in range(-1, 2):
+                            if k == 0 and l == 0:
+                                continue
+                            if i>=labels.shape[0]-(len(word) - 1) and k == 1:
+                                continue
+                            if i<=len(word) - 1 and k == -1:
+                                continue
+                            if j >= labels.shape[1]-(len(word) - 1) and l == 1:
+                                continue
+                            if j<=len(word) - 1 and l == -1:
+                                continue
+                            if check_word_again(labels, word, i, j, k, l)!=len(word):
+                                if check_word_again(labels, word, i, j, k, l)<min:
+                                    min = check_word_again(labels, word, i, j, k, l)
+                                    temp = [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
+                                wordFound = True
+            result+=temp
+    return result
+
+
+def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> bool:
+    for p in range(len(word)):
+        if labels[(i + p * k)][(j + p * l)] != word[p]:
+            return False
+    return True
+
+
+def check_word_again(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> int:
+    unmatched = 0
+    for p in range(len(word)):
+        if labels[(i + p * k)][(j + p * l)] != word[p] :
+            unmatched += 1
+    if unmatched == len(word):
+        return len(word)
+    return unmatched
