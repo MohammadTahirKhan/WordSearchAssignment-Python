@@ -177,64 +177,62 @@ def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]
     """
     result = []
     for word in words:
-        wordFound = False
+        # wordFound = False
         word = word.upper()
+        # for i in range(labels.shape[0]):
+        #     for j in range(labels.shape[1]):
+        #         if labels[i][j] == word[0]:
+        #             for k in range(-1, 2):
+        #                     for l in range(-1, 2):
+        #                         if k == 0 and l == 0:
+        #                             continue
+        #                         if i>=labels.shape[0]-(len(word) - 1) and k == 1:
+        #                             continue
+        #                         if i<=len(word) - 1 and k == -1:
+        #                             continue
+        #                         if j >= labels.shape[1]-(len(word) - 1) and l == 1:
+        #                             continue
+        #                         if j<=len(word) - 1 and l == -1:
+        #                             continue
+        #                         if check_word(labels, word, i, j, k, l):
+        #                             result += [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
+        #                             wordFound = True
+        # if not wordFound:
+        temp = []
+        min = len(word)
         for i in range(labels.shape[0]):
             for j in range(labels.shape[1]):
-                if labels[i][j] == word[0]:
-                    for k in range(-1, 2):
-                            for l in range(-1, 2):
-                                if k == 0 and l == 0:
-                                    continue
-                                if i>=labels.shape[0]-(len(word) - 1) and k == 1:
-                                    continue
-                                if i<=len(word) - 1 and k == -1:
-                                    continue
-                                if j >= labels.shape[1]-(len(word) - 1) and l == 1:
-                                    continue
-                                if j<=len(word) - 1 and l == -1:
-                                    continue
-                                if check_word(labels, word, i, j, k, l):
-                                    result += [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
-                                    wordFound = True
-        if not wordFound:
-            temp = []
-            min = len(word)
-            for i in range(labels.shape[0]):
-                for j in range(labels.shape[1]):
-                    for k in range(-1, 2):
-                        for l in range(-1, 2):
-                            if k == 0 and l == 0:
-                                continue
-                            if i>=labels.shape[0]-(len(word) - 1) and k == 1:
-                                continue
-                            if i<=len(word) - 1 and k == -1:
-                                continue
-                            if j >= labels.shape[1]-(len(word) - 1) and l == 1:
-                                continue
-                            if j<=len(word) - 1 and l == -1:
-                                continue
-                            if check_word_again(labels, word, i, j, k, l)!=len(word):
-                                if check_word_again(labels, word, i, j, k, l)<min:
-                                    min = check_word_again(labels, word, i, j, k, l)
-                                    temp = [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
-                                wordFound = True
-            result+=temp
+                for k in range(-1, 2):
+                    for l in range(-1, 2):
+                        if k == 0 and l == 0:
+                            continue
+                        if i>=labels.shape[0]-(len(word) - 1) and k == 1:
+                            continue
+                        if i<=len(word) - 1 and k == -1:
+                            continue
+                        if j >= labels.shape[1]-(len(word) - 1) and l == 1:
+                            continue
+                        if j<=len(word) - 1 and l == -1:
+                            continue
+                        check = check_word(labels, word, i, j, k, l)
+                        if check != len(word):
+                            if check < min:
+                                min = check
+                                temp = [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
+        result+=temp
     return result
 
 
-def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> bool:
-    for p in range(len(word)):
-        if labels[(i + p * k)][(j + p * l)] != word[p]:
-            return False
-    return True
+# def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> bool:
+#     for p in range(len(word)):
+#         if labels[(i + p * k)][(j + p * l)] != word[p]:
+#             return False
+#     return True
 
 
-def check_word_again(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> int:
+def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> int:
     unmatched = 0
     for p in range(len(word)):
         if labels[(i + p * k)][(j + p * l)] != word[p] :
             unmatched += 1
-    if unmatched == len(word):
-        return len(word)
     return unmatched
