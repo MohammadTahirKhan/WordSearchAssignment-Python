@@ -64,26 +64,28 @@ def reduce_dimensions(data: np.ndarray, model: dict) -> np.ndarray:
         np.ndarray: The reduced feature vectors.
     """
     
-    v = np.array(model['eigenvector'])
-    if len(v) == 0:
-        covx = np.cov(data, rowvar=0)
-        N = covx.shape[0]
-        w, v = scipy.linalg.eigh(covx, eigvals=(N-40,N-1))
-        v = np.fliplr(v)
+    # v = np.array(model['eigenvector'])
+    # if len(v) == 0:
+    # lab code
+    covx = np.cov(data, rowvar=0)
+    N = covx.shape[0]
+    w, v = scipy.linalg.eigh(covx, eigvals=(N-60,N-1))
+    v = np.fliplr(v)
         
     pca_data = np.dot((data - np.mean(data)), v)
-    processed_data = np.dot(pca_data, v.transpose()) + np.mean(data)
+    new_pca_data = np.dot(pca_data, v.transpose()) + np.mean(data)
     
     v = np.array(model['eigenvector'])
+    # lab code
     if len(v) == 0:
-        covx = np.cov(processed_data, rowvar=0)
+        covx = np.cov(new_pca_data, rowvar=0)
         N = covx.shape[0]
         w, v = scipy.linalg.eigh(covx, eigvals=(N - N_DIMENSIONS, N - 1))
         v = np.fliplr(v)
         model['eigenvector'] = v.tolist()
-    reconstructed_data = np.dot((processed_data - np.mean(processed_data)), v)
-    return reconstructed_data
-
+    reconstruct_pca_data = np.dot((new_pca_data - np.mean(new_pca_data)), v)
+    return reconstruct_pca_data
+    
 
 def process_training_data(fvectors_train: np.ndarray, labels_train: np.ndarray) -> dict:
     """Process the labeled training data and return model parameters stored in a dictionary.
@@ -148,7 +150,8 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
     nearest = np.argmax(dist, axis=1)
     
     return labels_train[nearest]
-
+    
+    
 
 def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]:
     """Dummy implementation of find_words.
@@ -208,29 +211,17 @@ def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]
                             continue
                         if i>=labels.shape[0]-(len(word) - 1) and k == 1:
                             continue
-                        if i<=len(word) - 1 and k == -1:
-                            continue
                         if j >= labels.shape[1]-(len(word) - 1) and l == 1:
                             continue
-                        if j<=len(word) - 1 and l == -1:
-                            continue
-                        check = check_word(labels, word, i, j, k, l)
-                        if check != len(word):
-                            if check < min:
-                                min = check
+                        unmatched = find_unmatching_letters(labels, word, i, j, k, l)
+                        if unmatched != len(word):
+                            if unmatched < min:
+                                min = unmatched
                                 temp = [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
         result+=temp
     return result
 
-
-# def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> bool:
-#     for p in range(len(word)):
-#         if labels[(i + p * k)][(j + p * l)] != word[p]:
-#             return False
-#     return True
-
-
-def check_word(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> int:
+def find_unmatching_letters(labels: np.ndarray, word: str, i: int, j: int, k: int, l: int) -> int:
     unmatched = 0
     for p in range(len(word)):
         if labels[(i + p * k)][(j + p * l)] != word[p] :
