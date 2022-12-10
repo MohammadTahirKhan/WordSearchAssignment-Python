@@ -148,10 +148,24 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
     modtrain = np.sqrt(np.sum(fvectors_train * fvectors_train, axis=1))
     dist = x / np.outer(modtest, modtrain.transpose())
     nearest = np.argmax(dist, axis=1)
+    # return labels_train[nearest]
     
-    return labels_train[nearest]
+    # knn
+    k = 10
     
-    
+    if k == 1:
+        return labels_train[nearest]
+    else:
+        knearest = np.argsort(dist, axis=1)[:, -k:]
+        kl = labels_train[knearest]
+        all_labels = np.unique(labels_train)
+        labels = []
+        for i in range(knearest.shape[0]):
+            label_sum = np.zeros(all_labels.shape[0])
+            for j in range(knearest.shape[1]):
+                label_sum[all_labels == kl[i, j]] += dist[i, knearest[i, j]]
+            labels.append(all_labels[np.argmax(label_sum)])
+        return labels
 
 def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]:
     """Dummy implementation of find_words.
