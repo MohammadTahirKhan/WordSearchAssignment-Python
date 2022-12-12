@@ -64,8 +64,6 @@ def reduce_dimensions(data: np.ndarray, model: dict) -> np.ndarray:
         np.ndarray: The reduced feature vectors.
     """
     
-    # v = np.array(model['eigenvector'])
-    # if len(v) == 0:
     # lab code
     covx = np.cov(data, rowvar=0)
     N = covx.shape[0]
@@ -148,14 +146,15 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
     modtrain = np.sqrt(np.sum(fvectors_train * fvectors_train, axis=1))
     dist = x / np.outer(modtest, modtrain.transpose())
     nearest = np.argmax(dist, axis=1)
-    # return labels_train[nearest]
     
-    # knn
-    k = 10
+    # value of k 
+    k = 9
     
     if k == 1:
+        # nearest neighbour 
         return labels_train[nearest]
     else:
+        # k-nearest neighbour
         knearest = np.argsort(dist, axis=1)[:, -k:]
         kl = labels_train[knearest]
         all_labels = np.unique(labels_train)
@@ -163,8 +162,10 @@ def classify_squares(fvectors_test: np.ndarray, model: dict) -> List[str]:
         for i in range(knearest.shape[0]):
             label_sum = np.zeros(all_labels.shape[0])
             for j in range(knearest.shape[1]):
-                label_sum[all_labels == kl[i, j]] += dist[i, knearest[i, j]]
-            labels.append(all_labels[np.argmax(label_sum)])
+                current_knearest = knearest[i, j]
+                current_kl = kl[i, j]
+                label_sum[all_labels == current_kl] += dist[i, current_knearest]
+            labels += [(all_labels[np.argmax(label_sum)])]
         return labels
 
 def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]:
@@ -194,27 +195,7 @@ def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]
     """
     result = []
     for word in words:
-        # wordFound = False
         word = word.upper()
-        # for i in range(labels.shape[0]):
-        #     for j in range(labels.shape[1]):
-        #         if labels[i][j] == word[0]:
-        #             for k in range(-1, 2):
-        #                     for l in range(-1, 2):
-        #                         if k == 0 and l == 0:
-        #                             continue
-        #                         if i>=labels.shape[0]-(len(word) - 1) and k == 1:
-        #                             continue
-        #                         if i<=len(word) - 1 and k == -1:
-        #                             continue
-        #                         if j >= labels.shape[1]-(len(word) - 1) and l == 1:
-        #                             continue
-        #                         if j<=len(word) - 1 and l == -1:
-        #                             continue
-        #                         if check_word(labels, word, i, j, k, l):
-        #                             result += [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
-        #                             wordFound = True
-        # if not wordFound:
         temp = []
         min = len(word)
         for i in range(labels.shape[0]):
@@ -229,7 +210,7 @@ def find_words(labels: np.ndarray, words: List[str], model: dict) -> List[tuple]
                             continue
                         unmatched = find_unmatching_letters(labels, word, i, j, k, l)
                         if unmatched != len(word):
-                            if unmatched < min:
+                            if unmatched <= min:
                                 min = unmatched
                                 temp = [(i,j, i + k * (len(word) - 1),j + l * (len(word) - 1))]
         result+=temp
