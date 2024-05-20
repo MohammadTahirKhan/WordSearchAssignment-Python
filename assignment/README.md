@@ -2,7 +2,7 @@
 
 ## Developing and Evaluating a Word Search Puzzle Solver
 
-*Due*: 3:00pm on Tuesday 13th December
+# Project brief and objective:
 
 ## Contents
 
